@@ -1,4 +1,4 @@
-#include "unwind_outline_api.h"
+#include "unwind_cfi_api.h"
 
 #include <dlfcn.h>
 #include <stdint.h>
@@ -19,7 +19,7 @@
 namespace {
 
 constexpr int kMaxTraceFrames = 96;
-constexpr const char *kLibraryNeedle = "libunwind_outline_cases";
+constexpr const char *kLibraryNeedle = "libunwind_cfi_cases";
 
 struct Metrics {
   int captures = 0;
@@ -92,7 +92,7 @@ NOINLINE USED static void captureUnwind(int tag) noexcept {
   g_sink = (g_sink << 7) ^ (mix >> 3) ^ 0xbf58476d1ce4e5b9ULL;
 }
 
-#define OUTLINE_PURE_PAYLOAD(TAG)                                             \
+#define CFI_BASIC_PURE_PAYLOAD(TAG)                                             \
   do {                                                                        \
     uint64_t a = g_sink + 0x9e3779b97f4a7c15ULL;                              \
     a ^= a >> 17;                                                             \
@@ -103,32 +103,32 @@ NOINLINE USED static void captureUnwind(int tag) noexcept {
     g_sink = (g_sink + a) ^ (b >> 7) ^ (b << 3);                              \
   } while (0)
 
-#define OUTLINE_CAPTURE_PAYLOAD(TAG)                                          \
+#define CFI_BASIC_CAPTURE_PAYLOAD(TAG)                                          \
   do {                                                                        \
-    OUTLINE_PURE_PAYLOAD(TAG);                                                \
+    CFI_BASIC_PURE_PAYLOAD(TAG);                                                \
     captureUnwind(TAG);                                                       \
-    OUTLINE_PURE_PAYLOAD(TAG);                                                \
+    CFI_BASIC_PURE_PAYLOAD(TAG);                                                \
   } while (0)
 
 struct FrameGuard {
   explicit FrameGuard(int value) noexcept : tag(value) {
-    OUTLINE_PURE_PAYLOAD(tag);
+    CFI_BASIC_PURE_PAYLOAD(tag);
   }
 
   ~FrameGuard() noexcept {
     ++g_metrics.destructors;
-    OUTLINE_PURE_PAYLOAD(tag);
+    CFI_BASIC_PURE_PAYLOAD(tag);
     captureUnwind(tag + 7000);
   }
 
   int tag;
 };
 
-#define DEFINE_OUTLINE_CASE(ID)                                               \
+#define DEFINE_BASIC_CASE(ID)                                               \
   NOINLINE USED static uint64_t repeated_leaf_##ID(int n) {                   \
     FrameGuard guard(n + 11);                                                 \
-    OUTLINE_CAPTURE_PAYLOAD(n);                                               \
-    OUTLINE_PURE_PAYLOAD(n + 1);                                              \
+    CFI_BASIC_CAPTURE_PAYLOAD(n);                                               \
+    CFI_BASIC_PURE_PAYLOAD(n + 1);                                              \
     if ((n & 31) == 7) {                                                       \
       ++g_metrics.exceptions_thrown;                                          \
       LeafError error;                                                        \
@@ -141,7 +141,7 @@ struct FrameGuard {
       error.code = n + 2000;                                                  \
       throw error;                                                            \
     }                                                                         \
-    OUTLINE_CAPTURE_PAYLOAD(n + 2);                                           \
+    CFI_BASIC_CAPTURE_PAYLOAD(n + 2);                                           \
     return g_sink ^ static_cast<uint64_t>(n * 17 + 5);                        \
   }                                                                           \
                                                                               \
@@ -149,19 +149,19 @@ struct FrameGuard {
     FrameGuard guard(n + 23);                                                 \
     uint64_t result = 0;                                                       \
     try {                                                                     \
-      OUTLINE_CAPTURE_PAYLOAD(n + 3);                                         \
+      CFI_BASIC_CAPTURE_PAYLOAD(n + 3);                                         \
       result ^= repeated_leaf_##ID(n + 1);                                    \
-      OUTLINE_CAPTURE_PAYLOAD(n + 4);                                         \
+      CFI_BASIC_CAPTURE_PAYLOAD(n + 4);                                         \
     } catch (const LeafError &error) {                                        \
       ++g_metrics.exceptions_caught;                                          \
-      OUTLINE_CAPTURE_PAYLOAD(error.code);                                    \
+      CFI_BASIC_CAPTURE_PAYLOAD(error.code);                                    \
       if ((error.code & 2) != 0) {                                             \
         ++g_metrics.rethrows;                                                 \
         throw;                                                                \
       }                                                                       \
       result += static_cast<uint64_t>(error.code) * 13;                       \
     }                                                                         \
-    OUTLINE_PURE_PAYLOAD(n + 5);                                              \
+    CFI_BASIC_PURE_PAYLOAD(n + 5);                                              \
     return result + (g_sink ^ static_cast<uint64_t>(n * 19 + 7));             \
   }                                                                           \
                                                                               \
@@ -169,70 +169,70 @@ struct FrameGuard {
     FrameGuard guard(n + 37);                                                 \
     uint64_t result = 0;                                                       \
     try {                                                                     \
-      OUTLINE_CAPTURE_PAYLOAD(n + 6);                                         \
+      CFI_BASIC_CAPTURE_PAYLOAD(n + 6);                                         \
       result += repeated_mid_##ID(n + 2);                                     \
-      OUTLINE_CAPTURE_PAYLOAD(n + 7);                                         \
+      CFI_BASIC_CAPTURE_PAYLOAD(n + 7);                                         \
     } catch (const BranchError &error) {                                      \
       ++g_metrics.exceptions_caught;                                          \
-      OUTLINE_CAPTURE_PAYLOAD(error.code);                                    \
+      CFI_BASIC_CAPTURE_PAYLOAD(error.code);                                    \
       result ^= static_cast<uint64_t>(error.code) * 31;                       \
     } catch (const BaseError &error) {                                        \
       ++g_metrics.exceptions_caught;                                          \
-      OUTLINE_CAPTURE_PAYLOAD(error.code + 1);                                \
+      CFI_BASIC_CAPTURE_PAYLOAD(error.code + 1);                                \
       result += static_cast<uint64_t>(error.code) * 43;                       \
     }                                                                         \
-    OUTLINE_PURE_PAYLOAD(n + 8);                                              \
+    CFI_BASIC_PURE_PAYLOAD(n + 8);                                              \
     return result ^ static_cast<uint64_t>(n * 29 + 3);                        \
   }
 
-DEFINE_OUTLINE_CASE(00)
-DEFINE_OUTLINE_CASE(01)
-DEFINE_OUTLINE_CASE(02)
-DEFINE_OUTLINE_CASE(03)
-DEFINE_OUTLINE_CASE(04)
-DEFINE_OUTLINE_CASE(05)
-DEFINE_OUTLINE_CASE(06)
-DEFINE_OUTLINE_CASE(07)
-DEFINE_OUTLINE_CASE(08)
-DEFINE_OUTLINE_CASE(09)
-DEFINE_OUTLINE_CASE(10)
-DEFINE_OUTLINE_CASE(11)
-DEFINE_OUTLINE_CASE(12)
-DEFINE_OUTLINE_CASE(13)
-DEFINE_OUTLINE_CASE(14)
-DEFINE_OUTLINE_CASE(15)
-DEFINE_OUTLINE_CASE(16)
-DEFINE_OUTLINE_CASE(17)
-DEFINE_OUTLINE_CASE(18)
-DEFINE_OUTLINE_CASE(19)
-DEFINE_OUTLINE_CASE(20)
-DEFINE_OUTLINE_CASE(21)
-DEFINE_OUTLINE_CASE(22)
-DEFINE_OUTLINE_CASE(23)
-DEFINE_OUTLINE_CASE(24)
-DEFINE_OUTLINE_CASE(25)
-DEFINE_OUTLINE_CASE(26)
-DEFINE_OUTLINE_CASE(27)
-DEFINE_OUTLINE_CASE(28)
-DEFINE_OUTLINE_CASE(29)
-DEFINE_OUTLINE_CASE(30)
-DEFINE_OUTLINE_CASE(31)
-DEFINE_OUTLINE_CASE(32)
-DEFINE_OUTLINE_CASE(33)
-DEFINE_OUTLINE_CASE(34)
-DEFINE_OUTLINE_CASE(35)
-DEFINE_OUTLINE_CASE(36)
-DEFINE_OUTLINE_CASE(37)
-DEFINE_OUTLINE_CASE(38)
-DEFINE_OUTLINE_CASE(39)
-DEFINE_OUTLINE_CASE(40)
-DEFINE_OUTLINE_CASE(41)
-DEFINE_OUTLINE_CASE(42)
-DEFINE_OUTLINE_CASE(43)
-DEFINE_OUTLINE_CASE(44)
-DEFINE_OUTLINE_CASE(45)
-DEFINE_OUTLINE_CASE(46)
-DEFINE_OUTLINE_CASE(47)
+DEFINE_BASIC_CASE(00)
+DEFINE_BASIC_CASE(01)
+DEFINE_BASIC_CASE(02)
+DEFINE_BASIC_CASE(03)
+DEFINE_BASIC_CASE(04)
+DEFINE_BASIC_CASE(05)
+DEFINE_BASIC_CASE(06)
+DEFINE_BASIC_CASE(07)
+DEFINE_BASIC_CASE(08)
+DEFINE_BASIC_CASE(09)
+DEFINE_BASIC_CASE(10)
+DEFINE_BASIC_CASE(11)
+DEFINE_BASIC_CASE(12)
+DEFINE_BASIC_CASE(13)
+DEFINE_BASIC_CASE(14)
+DEFINE_BASIC_CASE(15)
+DEFINE_BASIC_CASE(16)
+DEFINE_BASIC_CASE(17)
+DEFINE_BASIC_CASE(18)
+DEFINE_BASIC_CASE(19)
+DEFINE_BASIC_CASE(20)
+DEFINE_BASIC_CASE(21)
+DEFINE_BASIC_CASE(22)
+DEFINE_BASIC_CASE(23)
+DEFINE_BASIC_CASE(24)
+DEFINE_BASIC_CASE(25)
+DEFINE_BASIC_CASE(26)
+DEFINE_BASIC_CASE(27)
+DEFINE_BASIC_CASE(28)
+DEFINE_BASIC_CASE(29)
+DEFINE_BASIC_CASE(30)
+DEFINE_BASIC_CASE(31)
+DEFINE_BASIC_CASE(32)
+DEFINE_BASIC_CASE(33)
+DEFINE_BASIC_CASE(34)
+DEFINE_BASIC_CASE(35)
+DEFINE_BASIC_CASE(36)
+DEFINE_BASIC_CASE(37)
+DEFINE_BASIC_CASE(38)
+DEFINE_BASIC_CASE(39)
+DEFINE_BASIC_CASE(40)
+DEFINE_BASIC_CASE(41)
+DEFINE_BASIC_CASE(42)
+DEFINE_BASIC_CASE(43)
+DEFINE_BASIC_CASE(44)
+DEFINE_BASIC_CASE(45)
+DEFINE_BASIC_CASE(46)
+DEFINE_BASIC_CASE(47)
 
 using RootFn = uint64_t (*)(int);
 
@@ -253,7 +253,7 @@ static RootFn kRoots[] = {
 
 NOINLINE USED static uint64_t rethrowLeaf(int n) {
   FrameGuard guard(n + 101);
-  OUTLINE_CAPTURE_PAYLOAD(n + 102);
+  CFI_BASIC_CAPTURE_PAYLOAD(n + 102);
   ++g_metrics.exceptions_thrown;
   if ((n & 1) == 0) {
     LeafError error;
@@ -268,11 +268,11 @@ NOINLINE USED static uint64_t rethrowLeaf(int n) {
 NOINLINE USED static uint64_t rethrowBridge2(int n) {
   FrameGuard guard(n + 201);
   try {
-    OUTLINE_CAPTURE_PAYLOAD(n + 202);
+    CFI_BASIC_CAPTURE_PAYLOAD(n + 202);
     return rethrowLeaf(n + 1);
   } catch (const LeafError &error) {
     ++g_metrics.exceptions_caught;
-    OUTLINE_CAPTURE_PAYLOAD(error.code);
+    CFI_BASIC_CAPTURE_PAYLOAD(error.code);
     ++g_metrics.rethrows;
     throw;
   }
@@ -281,15 +281,15 @@ NOINLINE USED static uint64_t rethrowBridge2(int n) {
 NOINLINE USED static uint64_t rethrowBridge1(int n) {
   FrameGuard guard(n + 301);
   try {
-    OUTLINE_CAPTURE_PAYLOAD(n + 302);
+    CFI_BASIC_CAPTURE_PAYLOAD(n + 302);
     return rethrowBridge2(n + 2);
   } catch (const BranchError &error) {
     ++g_metrics.exceptions_caught;
-    OUTLINE_CAPTURE_PAYLOAD(error.code);
+    CFI_BASIC_CAPTURE_PAYLOAD(error.code);
     return static_cast<uint64_t>(error.code) ^ g_sink;
   } catch (const BaseError &error) {
     ++g_metrics.exceptions_caught;
-    OUTLINE_CAPTURE_PAYLOAD(error.code + 1);
+    CFI_BASIC_CAPTURE_PAYLOAD(error.code + 1);
     return static_cast<uint64_t>(error.code) + g_sink;
   }
 }
@@ -304,7 +304,7 @@ NOINLINE USED static uint64_t dispatchRoots(int iterations) {
         result ^= kRoots[i](value);
       } catch (const BaseError &error) {
         ++g_metrics.exceptions_caught;
-        OUTLINE_CAPTURE_PAYLOAD(error.code + i);
+        CFI_BASIC_CAPTURE_PAYLOAD(error.code + i);
         result += static_cast<uint64_t>(error.code) * 59;
       }
     }
@@ -375,7 +375,7 @@ static int finishResult(int iterations, uint32_t flags, UnwindSuiteResult *out) 
   }
 
   if ((flags & UNWIND_SUITE_VERBOSE) != 0) {
-    fprintf(stderr, "unwind_outline_cases: %s\n",
+    fprintf(stderr, "unwind_cfi_cases: %s\n",
             out != nullptr ? out->message : why);
   }
   return rc;
@@ -383,8 +383,8 @@ static int finishResult(int iterations, uint32_t flags, UnwindSuiteResult *out) 
 
 } // namespace
 
-extern "C" EXPORT int run_unwind_outline_suite(int iterations, uint32_t flags,
-                                                UnwindSuiteResult *result) {
+extern "C" EXPORT int run_unwind_basic_suite(int iterations, uint32_t flags,
+                                             UnwindSuiteResult *result) {
   if (iterations <= 0) {
     iterations = 1;
   }
@@ -396,11 +396,11 @@ extern "C" EXPORT int run_unwind_outline_suite(int iterations, uint32_t flags,
     result_mix += runRethrowTower(iterations);
   } catch (const BaseError &error) {
     ++g_metrics.exceptions_caught;
-    OUTLINE_CAPTURE_PAYLOAD(error.code + 9000);
+    CFI_BASIC_CAPTURE_PAYLOAD(error.code + 9000);
     result_mix ^= static_cast<uint64_t>(error.code) * 0x45d9f3bULL;
   } catch (...) {
     ++g_metrics.exceptions_caught;
-    OUTLINE_CAPTURE_PAYLOAD(9999);
+    CFI_BASIC_CAPTURE_PAYLOAD(9999);
     result_mix ^= 0xfeedfacecafebeefULL;
   }
 

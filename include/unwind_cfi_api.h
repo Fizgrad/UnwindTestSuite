@@ -1,5 +1,5 @@
-#ifndef UNWIND_OUTLINE_API_H
-#define UNWIND_OUTLINE_API_H
+#ifndef UNWIND_CFI_API_H
+#define UNWIND_CFI_API_H
 
 #include <stdint.h>
 
@@ -26,17 +26,23 @@ struct UnwindSuiteResult {
   char message[256];
 };
 
-using RunUnwindOutlineSuiteFn =
+using RunUnwindSuiteFn =
     int (*)(int iterations, uint32_t flags, UnwindSuiteResult *result);
 
-int run_unwind_outline_suite(int iterations, uint32_t flags,
-                             UnwindSuiteResult *result);
+int run_unwind_basic_suite(int iterations, uint32_t flags,
+                           UnwindSuiteResult *result);
 
 int run_unwind_stress_suite(int iterations, uint32_t flags,
                             UnwindSuiteResult *result);
 
 int run_unwind_deep_suite(int iterations, uint32_t flags,
                           UnwindSuiteResult *result);
+
+int run_unwind_cfi_suite(int iterations, uint32_t flags,
+                         UnwindSuiteResult *result);
+
+int run_unwind_cfi_ext_suite(int iterations, uint32_t flags,
+                             UnwindSuiteResult *result);
 
 int run_unwind_plugin_suite(int iterations, uint32_t flags,
                             UnwindSuiteResult *result);

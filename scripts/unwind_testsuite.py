@@ -9,16 +9,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-MAIN_SO = "libunwind_outline_cases.so"
-PLUGIN_SO = "libunwind_outline_plugin.so"
+MAIN_SO = "libunwind_cfi_cases.so"
+PLUGIN_SO = "libunwind_cfi_plugin.so"
 DRIVER = "unwind_driver"
 
 MAIN_SOURCES = [
-    ROOT / "src" / "outline_unwind_cases.cpp",
-    ROOT / "src" / "outline_unwind_extra_cases.cpp",
-    ROOT / "src" / "outline_unwind_deep_cases.cpp",
+    ROOT / "src" / "cfi_unwind_basic_cases.cpp",
+    ROOT / "src" / "cfi_unwind_stress_cases.cpp",
+    ROOT / "src" / "cfi_unwind_deep_cases.cpp",
+    ROOT / "src" / "cfi_unwind_candidate_cases.cpp",
+    ROOT / "src" / "cfi_unwind_extended_candidate_cases.cpp",
 ]
-PLUGIN_SOURCES = [ROOT / "src" / "outline_unwind_plugin_cases.cpp"]
+PLUGIN_SOURCES = [ROOT / "src" / "cfi_unwind_plugin_cases.cpp"]
 DRIVER_SOURCES = [ROOT / "src" / "driver.cpp"]
 
 

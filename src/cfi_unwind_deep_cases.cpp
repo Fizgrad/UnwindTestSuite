@@ -1,4 +1,4 @@
-#include "unwind_outline_api.h"
+#include "unwind_cfi_api.h"
 
 #include <algorithm>
 #include <array>
@@ -30,7 +30,7 @@
 namespace {
 
 constexpr int kMaxTraceFrames = 160;
-constexpr const char *kLibraryNeedle = "libunwind_outline_cases";
+constexpr const char *kLibraryNeedle = "libunwind_cfi_cases";
 
 struct DeepMetrics {
   int captures = 0;

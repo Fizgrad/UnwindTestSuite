@@ -29,17 +29,19 @@ COMMON_FLAGS=(
 
 "$CXX" "${COMMON_FLAGS[@]}" -fvisibility=hidden \
   "${EXTRA_CXXFLAGS_ARRAY[@]}" \
-  -shared "$ROOT/src/outline_unwind_cases.cpp" \
-  "$ROOT/src/outline_unwind_extra_cases.cpp" \
-  "$ROOT/src/outline_unwind_deep_cases.cpp" \
-  -Wl,-soname,libunwind_outline_cases.so \
-  -o "$OUT/libunwind_outline_cases.so" -ldl -pthread
+  -shared "$ROOT/src/cfi_unwind_basic_cases.cpp" \
+  "$ROOT/src/cfi_unwind_stress_cases.cpp" \
+  "$ROOT/src/cfi_unwind_deep_cases.cpp" \
+  "$ROOT/src/cfi_unwind_candidate_cases.cpp" \
+  "$ROOT/src/cfi_unwind_extended_candidate_cases.cpp" \
+  -Wl,-soname,libunwind_cfi_cases.so \
+  -o "$OUT/libunwind_cfi_cases.so" -ldl -pthread
 
 "$CXX" "${COMMON_FLAGS[@]}" -fvisibility=hidden \
   "${EXTRA_CXXFLAGS_ARRAY[@]}" \
-  -shared "$ROOT/src/outline_unwind_plugin_cases.cpp" \
-  -Wl,-soname,libunwind_outline_plugin.so \
-  -o "$OUT/libunwind_outline_plugin.so" -ldl -pthread
+  -shared "$ROOT/src/cfi_unwind_plugin_cases.cpp" \
+  -Wl,-soname,libunwind_cfi_plugin.so \
+  -o "$OUT/libunwind_cfi_plugin.so" -ldl -pthread
 
 "$CXX" "${COMMON_FLAGS[@]}" \
   "${EXTRA_CXXFLAGS_ARRAY[@]}" \

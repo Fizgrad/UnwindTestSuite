@@ -28,8 +28,8 @@ object unload or unwind table cleanup.
 
 The suite builds three runtime artifacts:
 
-- `libunwind_outline_cases.so`: the main test shared object
-- `libunwind_outline_plugin.so`: a plugin shared object loaded and unloaded on
+- `libunwind_cfi_cases.so`: the main test shared object
+- `libunwind_cfi_plugin.so`: a plugin shared object loaded and unloaded on
   every round
 - `unwind_driver`: the executable that drives repeated load, run, and unload
   cycles
@@ -37,7 +37,7 @@ The suite builds three runtime artifacts:
 Each test round performs this lifecycle:
 
 1. `dlopen()` the main shared object.
-2. Run the focused, stress, and deep unwind suites.
+2. Run the basic, stress, deep, CFI, and extended CFI unwind suites.
 3. `dlopen()` the plugin shared object.
 4. Run the plugin unwind suite.
 5. `dlclose()` the plugin shared object.
@@ -50,7 +50,7 @@ The plugin also contains a global destructor that captures a backtrace during
 
 The exported suites cover several categories of C++ behavior:
 
-- Focused repeated call chains with direct `_Unwind_Backtrace` captures,
+- Basic repeated call chains with direct `_Unwind_Backtrace` captures,
   cleanup destructors, and rethrow paths.
 - Mixed C++ features such as template recursion, virtual dispatch,
   function-pointer tables, `std::function`, vectors, strings, sorting, and
@@ -196,14 +196,14 @@ A valid run should:
 
 测试集会构建三个运行时产物：
 
-- `libunwind_outline_cases.so`：主测试共享库
-- `libunwind_outline_plugin.so`：每一轮都会加载和卸载的插件共享库
+- `libunwind_cfi_cases.so`：主测试共享库
+- `libunwind_cfi_plugin.so`：每一轮都会加载和卸载的插件共享库
 - `unwind_driver`：负责反复执行加载、测试和卸载流程的可执行文件
 
 每一轮测试执行以下流程：
 
 1. `dlopen()` 主测试共享库。
-2. 执行 focused、stress 和 deep unwind 测试套件。
+2. 执行 basic、stress、deep、CFI 和 extended CFI unwind 测试套件。
 3. `dlopen()` 插件共享库。
 4. 执行 plugin unwind 测试套件。
 5. `dlclose()` 插件共享库。

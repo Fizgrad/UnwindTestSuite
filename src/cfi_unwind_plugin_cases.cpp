@@ -1,4 +1,4 @@
-#include "unwind_outline_api.h"
+#include "unwind_cfi_api.h"
 
 #include <algorithm>
 #include <dlfcn.h>
@@ -22,7 +22,7 @@
 namespace {
 
 constexpr int kMaxTraceFrames = 96;
-constexpr const char *kLibraryNeedle = "libunwind_outline_plugin";
+constexpr const char *kLibraryNeedle = "libunwind_cfi_plugin";
 
 struct PluginMetrics {
   int captures = 0;

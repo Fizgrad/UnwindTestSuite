@@ -1,4 +1,4 @@
-#include "unwind_outline_api.h"
+#include "unwind_cfi_api.h"
 
 #include <algorithm>
 #include <atomic>
@@ -27,7 +27,7 @@
 namespace {
 
 constexpr int kMaxTraceFrames = 128;
-constexpr const char *kLibraryNeedle = "libunwind_outline_cases";
+constexpr const char *kLibraryNeedle = "libunwind_cfi_cases";
 
 struct StressMetrics {
   std::mutex lock;

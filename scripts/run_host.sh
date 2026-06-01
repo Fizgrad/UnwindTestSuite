@@ -9,8 +9,8 @@ DLCLOSE_ROUNDS="${DLCLOSE_ROUNDS:-32}"
 cd "$OUT"
 
 LD_LIBRARY_PATH=".:${LD_LIBRARY_PATH:-}" ./unwind_driver \
-  --lib ./libunwind_outline_cases.so \
-  --plugin ./libunwind_outline_plugin.so \
+  --lib ./libunwind_cfi_cases.so \
+  --plugin ./libunwind_cfi_plugin.so \
   --iterations "$ITERATIONS" \
   --dlclose-rounds "$DLCLOSE_ROUNDS" \
   --verbose

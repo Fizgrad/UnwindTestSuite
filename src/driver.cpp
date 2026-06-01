@@ -1,4 +1,4 @@
-#include "unwind_outline_api.h"
+#include "unwind_cfi_api.h"
 
 #include <dlfcn.h>
 #include <errno.h>
@@ -13,7 +13,7 @@
 namespace {
 
 struct Options {
-  const char *library = "./libunwind_outline_cases.so";
+  const char *library = "./libunwind_cfi_cases.so";
   const char *plugin = nullptr;
   int iterations = 6;
   int dlclose_rounds = 64;
@@ -107,10 +107,10 @@ static bool parseArgs(int argc, char **argv, Options *options) {
 static std::string siblingPluginPath(const char *library) {
   const char *slash = strrchr(library, '/');
   if (slash == nullptr) {
-    return "libunwind_outline_plugin.so";
+    return "libunwind_cfi_plugin.so";
   }
   return std::string(library, static_cast<size_t>(slash - library + 1)) +
-         "libunwind_outline_plugin.so";
+         "libunwind_cfi_plugin.so";
 }
 
 static int callSuite(void *handle, const Options &options, int round,
@@ -124,7 +124,7 @@ static int callSuite(void *handle, const Options &options, int round,
     return 11;
   }
 
-  auto run = reinterpret_cast<RunUnwindOutlineSuiteFn>(symbol);
+  auto run = reinterpret_cast<RunUnwindSuiteFn>(symbol);
   UnwindSuiteResult result;
   memset(&result, 0, sizeof(result));
   int rc = run(options.iterations, options.flags, &result);
@@ -143,9 +143,11 @@ static int runOneRound(const Options &options, int round) {
   }
 
   const char *suites[] = {
-      "run_unwind_outline_suite",
+      "run_unwind_basic_suite",
       "run_unwind_stress_suite",
       "run_unwind_deep_suite",
+      "run_unwind_cfi_suite",
+      "run_unwind_cfi_ext_suite",
   };
   for (const char *suite : suites) {
     int rc = callSuite(handle, options, round, suite);
